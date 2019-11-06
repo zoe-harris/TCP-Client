@@ -15,7 +15,7 @@ class TCPMachine(StateMachine):
     # ESTABLISHED: open connection, normal state for data transfer phase
     established = State('ESTABLISHED')
 
-    """ CONNECTION CLOSURE STATES """
+    """ CLOSING CONNECTION STATES """
     # FIN-WAIT-1: waiting for remote TCP termination request, or ACK of local request
     fin_wait_1 = State('FIN-WAIT-1')
     # FIN-WAIT-2: waiting for remote TCP termination request
@@ -27,7 +27,7 @@ class TCPMachine(StateMachine):
     snd_syn = closed.to(syn_sent)  # Client socket is opened, send SYN to server
     recv_syn_ack = syn_sent.to(established)  # Receive SYN-ACK + send ACK, establishing connection
 
-    """ CONNECTION CLOSURE TRANSITIONS """
+    """ CLOSING CONNECTION TRANSITIONS """
     snd_fin = established.to(fin_wait_1)  # On last data transmission, FIN=1
     rcv_ack = fin_wait_1.to(fin_wait_2)  # Receive ACK, send nothing
     snd_ack = fin_wait_2.to(time_wait)  # Receive FIN, send ACK
