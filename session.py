@@ -4,6 +4,7 @@
 
 from tcp_machine import TCPMachine
 from segment import Segment
+from packet_reader import PacketReader
 from socket import *
 import sys
 import time
@@ -21,23 +22,27 @@ class Session:
 
     def run_session(self):
 
-        """ 3-WAY HANDSHAKE  """
+        """
 
-        # create client socket + send SYN segment to server
-        client_socket = socket(AF_INET, SOCK_DGRAM)
-        client_socket.bind(('', self.client_port))
-        # FIXME: Make and send SYN packet
+            # declare TCP machine
+            tcp_machine = TCPMachine()
 
-        # receive SYN ACK + send ACK, establishing connection
-        received = client_socket.recvfrom(1024)
-        # FIXME: if received is SYN-ACK, send ACK
+            # Create client socket + bind to client port
+            client_socket = socket(AF_INET, SOCK_DGRAM)
+            client_socket.bind(('', self.client_port))
 
-        """ TRANSMIT DATA """
-        my_file = open(self.file_name, 'rb')
+            # Establish connection
+            Send SYN (syn_bit = 1, seq = x)
+            tcp_machine.snd_syn()
+            Receive SYN-ACK (syn_bit = 1, seq = y, ack_bit = 1, ack_num = x + 1)
+            Send ACK (ack_bit = 1, ack_num = y + 1)
+            tcp_machine.recv_syn_ack()
+
+            # Transmit data using selective repeat
+            my_file = open(self.file_name, 'rb')
 
 
-        """ CLOSE CONNECTION """
-        # Close file + client socket, terminate program
-        my_file.close()
-        client_socket.close()
-        sys.exit()
+
+            ...CLOSING PROCEDURES...
+
+        """
