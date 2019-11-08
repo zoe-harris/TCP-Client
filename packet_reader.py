@@ -20,3 +20,7 @@ class PacketReader:
     @staticmethod
     def get_fin_bit(segment):
         return segment[111]
+
+    @staticmethod
+    def get_seq_num(segment):
+        return segment[32:64]

@@ -4,6 +4,7 @@
 
 import argparse
 import sys
+from tcp_session import Session
 
 # make parser using argParse()
 parser = argparse.ArgumentParser()
@@ -25,3 +26,7 @@ if server_port < 5000 or server_port > 65535:
 
 if client_port < 5000 or client_port > 65535:
     sys.exit("ERROR: argParse value for client port is out of range (<5000, >65535)")
+
+# run TCP session
+s = Session(ip_address, file_name, server_port, client_port)
+s.run_session()
