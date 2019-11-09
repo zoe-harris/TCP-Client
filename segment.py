@@ -39,8 +39,8 @@ class Segment:
         self.pkt.append(Bits(uint=0, length=6))
         # WINDOW SIZE
         self.pkt.append(Bits(uint=self.window_size, length=16))
-        # CHECKSUM
-        self.pkt.append(Bits(uint=Checksum16.calc(self.data), length=16))
+        # CHECKSUM (ZERO ACTS AS PLACHOLDER)
+        self.pkt.append(Bits(uint=0, length=16))
         # URGENT POINTER (NOT USED)
         self.pkt.append(Bits(uint=0, length=16))
         # DATA (1452 BYTES)
@@ -50,6 +50,10 @@ class Segment:
         if len(self.pkt) < 11776:
             self.pkt.append(Bits(uint=0, length=(11776 - len(self.pkt))))
 
+        # OVERWRITE [128:144] WITH CHECKSUM
+        checksum = Checksum16.calc(self.pkt)
+        self.pkt.overwrite(Bits(uint=checksum, length=16), 128)
+
     """ METHODS FOR SETTING ACK AND FIN FLAGS """
 
     def set_ack_bit(self):
@@ -58,7 +62,7 @@ class Segment:
     def set_syn_bit(self):
         self.pkt.set(True, 110)
 
-    def set_fin(self):
+    def set_fin_bit(self):
         self.pkt.set(True, 111)
 
     """ METHODS FOR SETTING SEQ AND ACK NUMBERS"""
@@ -73,10 +77,11 @@ class Segment:
 
     """ TIMEOUT METHODS """
 
+    def start_timer(self):
+        self.timer = time()
+
     def timed_out(self):
         if (time() - self.timer) > 1:
             return True
 
-    def reset_timer(self):
-        self.timer = time()
 
