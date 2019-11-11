@@ -70,6 +70,7 @@ class Session:
                 ack = Segment(self.c_port, self.s_port, self.win_size, self.next_seq)
                 ack.set_ack_num(PacketReader.get_seq_num(fin_pkt) + 1)
                 ack.set_ack_bit()
+                ack.set_checksum()
                 self.tcp_machine.snd_ack()
 
             # TIMED WAIT -> CLOSED
@@ -83,22 +84,25 @@ class Session:
     def handshake(self):
 
         # make + send SYN packet
-        syn = Segment(self.c_port, self.s_port, self.win_size, 0)
+        syn = Segment(self.c_port, self.s_port, self.win_size, 61)
         syn.set_syn_bit()
-        self.client_socket.sendto(bytearray(syn.pkt), self.server)
+        syn.set_checksum()
+        self.client_socket.sendto(syn.pkt.bytes, self.server)
 
         # advance TCP machine from CLOSED to SYN-SENT
         self.tcp_machine.snd_syn()
 
         # receive SYN-ACK packet, write SEQ number to y
         recv_pkt = (self.client_socket.recvfrom(1472))[0]
+        self.next_ack_num = PacketReader.get_seq_num(recv_pkt)
         y = PacketReader.get_seq_num(recv_pkt)
 
         # make ACK packet with ACK number = y + 1
-        ack = Segment(self.c_port, self.s_port, self.win_size, 0)
+        ack = Segment(self.c_port, self.s_port, self.win_size, 61)
         ack.set_ack_bit()
         ack.set_ack_num(y + 1)
-        self.client_socket.sendto(bytearray(syn.pkt), self.server)
+        syn.set_checksum()
+        self.client_socket.sendto(syn.pkt.bytes, self.server)
 
         # advance TCP machine from SYN-SENT to ESTABLISHED
         self.tcp_machine.recv_syn_ack()
@@ -112,6 +116,7 @@ class Session:
             data = bytearray(file.read(1452))
             segment = Segment(self.c_port, self.s_port, self.win_size, self.next_seq, data)
             segment.set_ack_num(self.next_ack_num)
+            segment.set_checksum()
 
             # check if this was the last packet to be made
             if len(data) < 1452:
@@ -127,7 +132,7 @@ class Session:
             self.next_seq += 1452
 
             # send the new TCP segment + start timer for that segment
-            self.client_socket.sendto(bytearray(segment.pkt), self.server)
+            self.client_socket.sendto(segment.pkt.bytes, self.server)
             segment.start_timer()
 
     """ retransmit any unACKed packets that have timed out """
@@ -135,7 +140,7 @@ class Session:
 
         for pkt in self.unacked_packets:
             if pkt.timed_out():
-                self.client_socket.sendto(bytearray(pkt.pkt), self.server)
+                self.client_socket.sendto(pkt.pkt.bytes, self.server)
                 pkt.start_timer()
 
     """ receive ACK from server + update list of unACKed packets """

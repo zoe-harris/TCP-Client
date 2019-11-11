@@ -9,7 +9,7 @@ from crccheck.checksum import Checksum16
 
 class Segment:
 
-    def __init__(self, src_port, dest_port, window_size, seq, data=BitArray()):
+    def __init__(self, src_port, dest_port, window_size, seq, data=None):
 
         # INITIALIZE MEMBER VARIABLES
         self.src_port = src_port
@@ -18,7 +18,7 @@ class Segment:
         self.seq = seq
         self.data = data
 
-        # START PACKET TIMER
+        # DECLARE PACKET TIMER
         self.timer = time()
 
         # DECLARE PACKET AS BIT ARRAY
@@ -39,19 +39,18 @@ class Segment:
         self.pkt.append(Bits(uint=0, length=6))
         # WINDOW SIZE
         self.pkt.append(Bits(uint=self.window_size, length=16))
-        # CHECKSUM (ZERO ACTS AS PLACHOLDER)
+        # CHECKSUM (ZERO ACTS AS PLACEHOLDER)
         self.pkt.append(Bits(uint=0, length=16))
         # URGENT POINTER (NOT USED)
         self.pkt.append(Bits(uint=0, length=16))
         # DATA (1452 BYTES)
-        self.pkt.append(self.data)
+        if data is not None:
+            self.pkt.append(self.data)
 
-        # ADD ZERO PADDING AS NEEDED
-        if len(self.pkt) < 11776:
-            self.pkt.append(Bits(uint=0, length=(11776 - len(self.pkt))))
-
-        # OVERWRITE [128:144] WITH CHECKSUM
-        checksum = Checksum16.calc(self.pkt)
+    """ SET CHECKSUM """
+    def set_checksum(self):
+        checksum = Checksum16.calcbytes(self.pkt.bytes)
+        checksum = int.from_bytes(checksum, byteorder='big')
         self.pkt.overwrite(Bits(uint=checksum, length=16), 128)
 
     """ METHODS FOR SETTING ACK AND FIN FLAGS """
