@@ -48,6 +48,7 @@ class Segment:
             self.pkt.append(self.data)
 
     """ SET CHECKSUM """
+
     def set_checksum(self):
         checksum = Checksum16.calcbytes(self.pkt.bytes)
         checksum = int.from_bytes(checksum, byteorder='big')

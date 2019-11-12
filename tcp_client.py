@@ -4,11 +4,11 @@
 
 import argparse
 import sys
-from tcp_session import Session
-from segment import Segment
-from packet_reader import PacketReader
+from session import Session
+# from segment import Segment
+# from packet_reader import PacketReader
 
-"""
+
 # make parser using argParse()
 parser = argparse.ArgumentParser()
 parser.add_argument('-a')  # IP Address
@@ -34,24 +34,33 @@ if client_port < 5000 or client_port > 65535:
 s = Session(ip_address, file_name, server_port, client_port)
 s.run_session()
 
-"""
 
+"""
 c_port = 5001
 s_port = 6001
 win_size = 2400
-y = 243
 
 # make + send SYN packet
-syn = Segment(c_port, s_port, win_size, 0)
+# make + send SYN packet
+syn = Segment(c_port, s_port, win_size, 61)
 syn.set_syn_bit()
 syn.set_checksum()
-print(" ----------------------- SYN PACKET ----------------------- ")
-PacketReader.print_pkt(syn)
 
+# print(" ----------------------- SYN PACKET ----------------------- ")
+# PacketReader.print_pkt(syn)
+
+# receive SYN-ACK packet, write SEQ number to y
+y = PacketReader.get_seq_num(syn.pkt)
+# y = int.from_bytes(y, byteorder='big', signed=False)
+print("Y: ", y)
+print(y.uint)
+# print("Y INT: ", int.from_bytes(y, byteorder='big'))
 # make ACK packet with ACK number = y + 1
-ack = Segment(c_port, s_port, win_size, 0)
+ack = Segment(c_port, s_port, win_size, 61)
 ack.set_ack_bit()
-ack.set_ack_num(y + 1)
+ack.set_ack_num(y.uint + 1)
 syn.set_checksum()
-print(" ----------------------- ACK PACKET -----------------------")
-PacketReader.print_pkt(ack)
+
+# print(" ----------------------- ACK PACKET -----------------------")
+# PacketReader.print_pkt(ack)
+"""
