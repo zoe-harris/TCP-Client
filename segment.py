@@ -43,7 +43,7 @@ class Segment:
         self.pkt.append(Bits(uint=0, length=16))
         # URGENT POINTER (NOT USED)
         self.pkt.append(Bits(uint=0, length=16))
-        # DATA (1452 BYTES)
+        # DATA
         if data is not None:
             self.pkt.append(self.data)
 
