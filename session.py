@@ -44,13 +44,12 @@ class Session:
 
         # 3-WAY HANDSHAKE
         if self.tcp_machine.closed:
-            print("3-WAY HANDSHAKE")
             self.handshake()
 
         if self.tcp_machine.established:
 
             file = open(self.file_name, 'rb')
-            print("TRANSMITTING DATA")
+
             # ESTABLISHED + TRANSMIT DATA
             while not self.tcp_machine.is_fin_wait_1:
 
@@ -77,6 +76,7 @@ class Session:
             # TIMED WAIT -> CLOSED
             if self.tcp_machine.is_time_wait:
                 time.sleep(5)
+                self.tcp_machine.timeout()
                 self.file_name.close()
                 self.client_socket.close()
                 sys.exit()
@@ -89,7 +89,6 @@ class Session:
         syn.set_syn_bit()
         syn.set_checksum()
         self.client_socket.sendto(syn.pkt.bytes, self.server)
-        print("Sent SYN packet with SEQ #{}".format(self.next_seq))  # FIXME: Delete this later
         self.next_seq += 1
 
         # advance TCP machine from CLOSED to SYN-SENT
@@ -97,22 +96,18 @@ class Session:
 
         # receive SYN-ACK packet, write SEQ number to y
         syn_ack = (self.client_socket.recvfrom(1472))[0]
-        print("Received SYN-ACK packet with SEQ #{}".format(PktReader.get_ack_num(syn_ack)))  # FIXME: Delete this
         self.next_ack_num = PktReader.get_seq_num(syn_ack)
         y = PktReader.get_seq_num(syn_ack)
 
         # make ACK packet with ACK number = y + 1
         ack = Segment(self.c_port, self.s_port, self.win_size, self.next_seq)
         ack.set_ack_bit()
-        # ack.set_ack_num(int.from_bytes(y, byteorder='big') + 1)
         ack.set_ack_num(y + 1)
         ack.set_checksum()
         self.client_socket.sendto(syn.pkt.bytes, self.server)
-        print("Sent ACK packet with SEQ number {}".format(self.next_seq))  # FIXME: Delete this later
 
         # advance TCP machine from SYN-SENT to ESTABLISHED
         self.tcp_machine.recv_syn_ack()
-        print("Connection Established")  # FIXME: Delete this later
 
     """ if next SEQ number within window, make + send new segment """
     def send_packet(self, file):
@@ -122,20 +117,21 @@ class Session:
             # read data + make new TCP segment
             data = bytearray(file.read(1452))
             segment = Segment(self.c_port, self.s_port, self.win_size, self.next_seq, data)
-            segment.set_checksum()
-            print("Sent packet with SEQ #{}".format(self.next_seq))  # FIXME: delete this later
-            # check if this was the last packet to be made
+
+            # advance next SEQ number
+            self.next_seq += len(data)
+
+            # if last packet, set FIN bit + advance state machine
             if len(data) < 1452:
                 segment.set_fin_bit()
                 self.last_seq_num = self.next_seq
-                # advance TCP machine to FIN-WAIT-1
                 self.tcp_machine.snd_fin()
+
+            # calculate packet's checksum
+            segment.set_checksum()
 
             # add segment to list of unACKed packets
             self.unacked_packets.append(segment)
-
-            # advance next SEQ number
-            self.next_seq += 1452
 
             # send the new TCP segment + start timer for that segment
             self.client_socket.sendto(segment.pkt.bytes, self.server)
@@ -155,9 +151,6 @@ class Session:
         # receive ACK from server + extract ACK number
         server_ack = (self.client_socket.recvfrom(1472))[0]
         server_ack_num = PktReader.get_ack_num(server_ack)
-
-        print("Received ACK for {}".format(server_ack_num))  # FIXME: Delete this later
-
         self.next_ack_num = PktReader.get_seq_num(server_ack)
 
         # if ACK number > send base, advance send base
@@ -166,9 +159,9 @@ class Session:
 
         # remove ACKed packet from list of unACKed packets
         for pkt in self.unacked_packets:
-            if pkt.seq == (server_ack_num + 1):  # FIXME: Is this right?
+            if pkt.seq == server_ack_num:
                 self.unacked_packets.remove(pkt)
 
         # check if ACK was for FIN packet
-        if PktReader.get_seq_num(server_ack) == self.last_seq_num:
+        if server_ack_num == self.last_seq_num:
             self.tcp_machine.rcv_ack()
